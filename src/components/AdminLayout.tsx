@@ -44,7 +44,7 @@ const AdminLayout = () => {
     <div className="flex min-h-screen bg-gray-100">
       <Sidebar />
       <div className="flex-1 overflow-auto">
-        <Toaster position="top-right" />
+        {/* <Toaster position="top-right" /> */}
         <main className="p-6">
           <Outlet />
         </main>

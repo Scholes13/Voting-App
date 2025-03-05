@@ -40,10 +40,11 @@ function VotedList() {
         return;
       }
 
-      if (data?.group) { // Check if data and data.group exist
-        setTodayGroup(data.group);
+      console.log("Data from fetchTodayGroup:", data); // ADDED CONSOLE LOG
+      if (data?.group) {
+        setTodayGroup(data?.group as Group | null);
       } else {
-        setTodayGroup(null); // Set to null if no group is found
+        setTodayGroup(null);
       }
       setLoading(false);
     } catch (error) {
@@ -53,24 +54,52 @@ function VotedList() {
   };
 
   const fetchVotedEmployees = async (groupId: string) => {
-    const todayUTC = new Date();
-    const today = todayUTC.toISOString().split('T')[0];
+    try {
+      const { data, error } = await supabase
+        .from('votes')
+        .select('employee:employees(name)')
+        .eq('group_id', groupId)
+        .order('created_at', { ascending: false });
 
-    const { data, error } = await supabase
-      .from('votes')
-      .select('employee:employees(name)')
-      .eq('group_id', groupId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching voted employees:', error);
-      return;
+      if (error) {
+        console.error('Error fetching voted employees:', error);
+        return;
+      }
+      console.log("Voted Employees Data:", data); // Keep existing console log
+      setVotedEmployees(data.map(v => v.employee) as Employee[]);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
     }
-    
-    console.log("Fetched votes data:", data); // Log the data
-    setVotedEmployees(data.map(v => v.employee) as Employee[]);
-    setLoading(false);
   };
+
+  const setupRealtimeSubscription = () => {
+    const subscription = supabase
+      .channel('votes')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'votes'
+      }, (payload) => {
+        fetchVotedEmployees(todayGroup?.id || '');
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  };
+
+  useEffect(() => {
+    if (todayGroup) {
+      setupRealtimeSubscription();
+    }
+    return () => {
+      setupRealtimeSubscription()();
+    };
+  }, [todayGroup]);
+
 
   if (loading) {
     return (

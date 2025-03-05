@@ -1,0 +1,43 @@
+{
+    "version": "13.22",
+    "description": "A command-line application for reading, writing and editing meta information in a wide variety of files.",
+    "homepage": "https://exiftool.org",
+    "license": "GPL-1.0-or-later|Artistic-1.0-Perl",
+    "architecture": {
+        "64bit": {
+            "url": "https://exiftool.org/exiftool-13.22_64.zip",
+            "hash": "5a7c7ab50b77c819bd583401a3bbb2d0b2b31ecf8962ff10746341dac82475d0",
+            "extract_dir": "exiftool-13.22_64"
+        },
+        "32bit": {
+            "url": "https://exiftool.org/exiftool-13.22_32.zip",
+            "hash": "18f4b8a249baf108fe797e61d165f81ad98620d0b836dc43f9d2abb25672d7ce",
+            "extract_dir": "exiftool-13.22_32"
+        }
+    },
+    "pre_install": "Copy-Item \"$dir\\exiftool(-k).exe\" \"$dir\\exiftool.exe\"",
+    "bin": [
+        "exiftool.exe",
+        "exiftool(-k).exe"
+    ],
+    "checkver": {
+        "url": "https://exiftool.org/ver.txt",
+        "regex": "([\\d.]+)"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://exiftool.org/exiftool-$version_64.zip",
+                "extract_dir": "exiftool-$version_64"
+            },
+            "32bit": {
+                "url": "https://exiftool.org/exiftool-$version_32.zip",
+                "extract_dir": "exiftool-$version_32"
+            }
+        },
+        "hash": {
+            "url": "$baseurl/checksums.txt",
+            "regex": "$basename.*?$sha256"
+        }
+    }
+}

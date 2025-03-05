@@ -15,6 +15,7 @@ interface Employee {
 interface Department {
   id: string;
   name: string;
+  department_id: string; // Ensure department_id is defined in Department interface
 }
 
 function Employees() {
@@ -116,25 +117,42 @@ function Employees() {
     }
   };
 
+  
   const handleDeleteEmployee = async (id: string) => {
     try {
-      if (!confirm('Are you sure you want to delete this employee?')) return;
+      // console.count('handleDeleteEmployee');
+      // console.log('Delete button clicked for employee ID:', id);
+      // console.log('Attempting to delete employee with ID:', id);
 
-      const { error } = await supabase
+      // First, delete votes associated with the employee
+      const { error: deleteVotesError } = await supabase
+        .from('votes')
+        .delete()
+        .eq('employee_id', id);
+
+      if (deleteVotesError) {
+        console.error('Error deleting votes for employee:', deleteVotesError);
+        throw deleteVotesError; // Stop if deleting votes fails
+      }
+
+      // Then, delete the employee
+      const { error: deleteEmployeeError } = await supabase
         .from('employees')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (deleteEmployeeError) {
+        console.error('Supabase delete employee error:', deleteEmployeeError);
+        throw deleteEmployeeError;
+      }
 
       toast.success('Employee deleted successfully');
       fetchEmployees();
     } catch (error) {
       console.error('Error deleting employee:', error);
-      toast.error('Failed to delete employee');
+      toast.error('Failed to delete employee. Please check console for details.');
     }
   };
-
   const startEditing = (employee: Employee) => {
     setIsEditing(employee.id);
     setEditEmployee({ ...employee });
@@ -282,7 +300,7 @@ function Employees() {
                     <div className="flex justify-end space-x-2">
                       <button
                         onClick={() => startEditing(employee)}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="text-gray-500 hover:text-gray-700"
                       >
                         <Pencil className="h-5 w-5" />
                       </button>

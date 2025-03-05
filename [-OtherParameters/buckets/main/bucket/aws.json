@@ -1,0 +1,28 @@
+{
+    "version": "2.24.17",
+    "description": "Unified tool to manage AWS services",
+    "homepage": "https://aws.amazon.com/cli/",
+    "license": "Apache-2.0",
+    "architecture": {
+        "64bit": {
+            "url": "https://awscli.amazonaws.com/AWSCLIV2-2.24.17.msi",
+            "hash": "5041b19142596eae395779c6160e6454a31e3870ad4cac8d800ca1c57b85f8eb"
+        }
+    },
+    "extract_dir": "Amazon\\AWSCLIV2",
+    "bin": [
+        "aws.exe",
+        "aws_completer.exe"
+    ],
+    "checkver": {
+        "url": "https://api.github.com/repositories/6780767/tags",
+        "jsonpath": "$[0].name"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://awscli.amazonaws.com/AWSCLIV2-$version.msi"
+            }
+        }
+    }
+}

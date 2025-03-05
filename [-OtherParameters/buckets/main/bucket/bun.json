@@ -1,0 +1,58 @@
+{
+    "version": "1.2.4",
+    "description": "Incredibly fast JavaScript runtime, bundler, transpiler and package manager - all in one.",
+    "homepage": "https://bun.sh/",
+    "license": "MIT",
+    "suggest": {
+        "vcredist": "extras/vcredist2022"
+    },
+    "architecture": {
+        "64bit": {
+            "url": [
+                "https://github.com/oven-sh/bun/releases/download/bun-v1.2.4/bun-windows-x64.zip",
+                "https://github.com/oven-sh/bun/releases/download/bun-v1.2.4/bun-windows-x64-baseline.zip"
+            ],
+            "hash": [
+                "02513d08fb02d9aef71df6d6c23f04d1afa896622ed59d78781e6e839ed0e05c",
+                "49dd385e79d95d087596d3e75fc3b27086469cb2a0ca3d139121a844a9b4dc70"
+            ]
+        }
+    },
+    "pre_install": [
+        "$avx2 = Start-Job -ScriptBlock {",
+        "    Add-Type -MemberDefinition '[DllImport(\"kernel32.dll\")] public static extern bool IsProcessorFeaturePresent(int ProcessorFeature);' -Name Kernel32 -Namespace Win32",
+        "    return [Win32.Kernel32]::IsProcessorFeaturePresent(40)",
+        "} | Receive-Job -Wait -AutoRemoveJob",
+        "$target = 'bun-windows-x64'",
+        "if (-not $avx2) {",
+        "    $target += '-baseline'",
+        "}",
+        "Move-Item \"$dir\\$target\\bun.exe\" \"$dir\\bun.exe\"",
+        "Remove-Item \"$dir\\bun-windows-*\" -Recurse"
+    ],
+    "bin": [
+        "bun.exe",
+        [
+            "bun.exe",
+            "bunx",
+            "x"
+        ]
+    ],
+    "checkver": {
+        "github": "https://github.com/oven-sh/bun",
+        "re": "bun-v([\\d.]+)"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": [
+                    "https://github.com/oven-sh/bun/releases/download/bun-v$version/bun-windows-x64.zip",
+                    "https://github.com/oven-sh/bun/releases/download/bun-v$version/bun-windows-x64-baseline.zip"
+                ]
+            }
+        },
+        "hash": {
+            "url": "$baseurl/SHASUMS256.txt"
+        }
+    }
+}

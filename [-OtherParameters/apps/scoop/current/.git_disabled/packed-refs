@@ -1,0 +1,38 @@
+# pack-refs with: peeled fully-peeled sorted 
+d86b7c72e281375e8209f8f23fdedfee790cd9a6 refs/remotes/origin/analytics
+ac6f1baaf4b4fa50e46d6aaf0b6400a3a84cc910 refs/remotes/origin/develop
+44a1ed6f44a2c97bde5ca0663a1bee7a49a1470b refs/remotes/origin/feat-decompress-pipeline
+ea37a9ef63b616f73a6728c51b7a611af6d8ded2 refs/remotes/origin/feat-iec
+472cd58a8cdd4e8b0adceb01c4d2b200640d3711 refs/remotes/origin/feature/mediafire
+bc08222f3deb805deefdb5727949fb629fac31eb refs/remotes/origin/feature/services
+48418cc0d6060ba2c842f1b231de51c0d578199b refs/remotes/origin/fix-bucket
+0274c265eb370a39ed98ee8de65302977444f2c6 refs/remotes/origin/gh-pages
+859d1db51bcc840903d5280567846ae2f7207ca2 refs/remotes/origin/master
+c2f1e8eeb1291c71e60ddd40444e8c47d61860c5 refs/remotes/origin/persistence-rework
+2745b0f42b736e0abfef7158c8fd50ae2361635c refs/remotes/origin/rasa/sandbox
+08ff0f6ae0b6aaa114ae26fb0ba96344aa3971c8 refs/remotes/origin/scoop-diag
+87a1e784d7463fea36fa41fcb7cb5537cbcfdc52 refs/tags/2019-05-12
+0b344cecd94d6df2c8ec408d5c9d0f66b0bcaa76 refs/tags/2019-05-15
+^731d878490a7bb1aa9d2bf1c15cd27ef2c31c2fb
+b9b48182b4d921aa92e9b3e53ab2d2c376d467d7 refs/tags/2019-06-24
+08af9ff6e7f7b017701c0c9114294b13e1e83fb8 refs/tags/2019-10-18
+6eb90c9c112c8c6c1790f1bd4e1c9cd67a6e70df refs/tags/2019-10-23
+bed83de477aa413868ce7de3d95e5862ddb4f158 refs/tags/2020-10-22
+^643cfb0da8369dbbe2964511698763c5ff179492
+227de6cfb8433a86ac0f0a279e691327ae04554c refs/tags/2020-11-26
+59088a9f0094ecaa0c36793eef232b3af237a59b refs/tags/2021-11-22
+5602083868ed04224ea8edf1ff0c3a2a3f6588b9 refs/tags/2021-12-26
+7d5a47cc774961c15fdae6be1daf6331282b0161 refs/tags/v0.1.0
+aaa726c09f786d2af902d827ae8d0caee964ca1e refs/tags/v0.2.0
+d63b7d6f01bb33c473172715d1007751baf937de refs/tags/v0.2.1
+93db5f47f1063c3a147153eef266fc34d65dc46e refs/tags/v0.2.2
+80b52e32a11fda2089949aaec00295d6185da3f7 refs/tags/v0.2.3
+4a31bd330244f7f89f16208cdddda3f9edac2d65 refs/tags/v0.2.4
+8aee6f99803d0f0aeab252e1d9d4848777185c51 refs/tags/v0.3.0
+f93028001fbe5c78cc41f59e3814d2ac8e595724 refs/tags/v0.3.1
+105e4161fcbee6f2462652fff333c21461736740 refs/tags/v0.4.0
+d285bb08d4852e0a7d524387fee53aa47c7b2a99 refs/tags/v0.4.1
+d337bb1fa69a56637101254a1ac9e0ad13a12647 refs/tags/v0.4.2
+716b6db3ae55cd32eeb740243d688110a2728f83 refs/tags/v0.5.0
+be56faf29016a3bb82f5bc15d3e4621930ea7a38 refs/tags/v0.5.1
+859d1db51bcc840903d5280567846ae2f7207ca2 refs/tags/v0.5.2

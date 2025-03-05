@@ -5,45 +5,116 @@ interface Employee {
   name: string;
 }
 
+interface Group {
+  id: string;
+  name: string;
+  theme: string;
+}
+
 function PendingVotes() {
   const [pendingEmployees, setPendingEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [todayGroup, setTodayGroup] = useState<Group | null>(null);
 
   useEffect(() => {
-    fetchPendingEmployees();
+    fetchTodayGroup();
   }, []);
 
-  const fetchPendingEmployees = async () => {
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Get all employees
-    const { data: allEmployees, error: employeesError } = await supabase
-      .from('employees')
-      .select('name');
-
-    if (employeesError) {
-      console.error('Error fetching employees:', employeesError);
-      return;
+  useEffect(() => {
+    if (todayGroup) {
+      fetchPendingEmployees(todayGroup.id);
     }
+  }, [todayGroup]);
 
-    // Get employees who have voted today
-    const { data: votedEmployees, error: votedError } = await supabase
-      .from('votes')
-      .select('employee:employees(name)')
-      .eq('created_at::date', today);
+  const fetchTodayGroup = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('schedules')
+        .select('group:groups(*)')
+        .eq('date', today)
+        .maybeSingle();
 
-    if (votedError) {
-      console.error('Error fetching voted employees:', votedError);
-      return;
+      if (error) {
+        console.error('Error fetching today\'s group:', error);
+        return;
+      }
+
+      if (data?.group) {
+        setTodayGroup(data.group);
+      } else {
+        setTodayGroup(null);
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error('Error:', error);
+      setLoading(false);
     }
-
-    // Filter out employees who have already voted
-    const votedNames = new Set(votedEmployees.map(v => v.employee.name));
-    const pending = allEmployees.filter(emp => !votedNames.has(emp.name));
-
-    setPendingEmployees(pending);
-    setLoading(false);
   };
+
+  const fetchPendingEmployees = async (groupId: string) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Get all employees
+      const { data: allEmployees, error: employeesError } = await supabase
+        .from('employees')
+        .select('name');
+
+      if (employeesError) {
+        console.error('Error fetching employees:', employeesError);
+        return;
+      }
+
+      // Get employees who have voted today
+      const { data: votedEmployees, error: votedError } = await supabase
+        .from('votes')
+        .select('employee:employees(name)')
+        .eq('group_id', groupId);
+
+      if (votedError) {
+        console.error('Error fetching voted employees:', votedError);
+        return;
+      }
+
+      // Filter out employees who have already voted
+      const votedNames = new Set(votedEmployees.map(v => v.employee.name));
+      const pending = allEmployees.filter(emp => !votedNames.has(emp.name));
+
+      setPendingEmployees(pending);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error:', error);
+      setLoading(false);
+    }
+  };
+
+  const setupRealtimeSubscription = () => {
+    const subscription = supabase
+      .channel('votes')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'votes'
+      }, (payload) => {
+        fetchPendingEmployees(todayGroup?.id || '');
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  };
+
+  useEffect(() => {
+    if (todayGroup) {
+      setupRealtimeSubscription();
+    }
+    return () => {
+      setupRealtimeSubscription()();
+    };
+  }, [todayGroup]);
+
 
   if (loading) {
     return (

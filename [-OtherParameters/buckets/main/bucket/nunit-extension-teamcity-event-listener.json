@@ -1,0 +1,21 @@
+{
+    "version": "1.0.9",
+    "description": "NUnit Team City Event Listener Extension",
+    "homepage": "https://nunit.org/",
+    "license": "MIT",
+    "depends": "nunit-console",
+    "url": "https://packages.chocolatey.org/nunit-extension-teamcity-event-listener.1.0.9.nupkg",
+    "hash": "803d8299fa8dfe3c76d9674d2f0360e339bf8fd7004df2a7a6811fc24d9dd9ab",
+    "extract_dir": "tools",
+    "checkver": {
+        "url": "https://chocolatey.org/packages/nunit-extension-teamcity-event-listener",
+        "regex": "\\s+([\\d.]+)</title>"
+    },
+    "autoupdate": {
+        "url": "https://packages.chocolatey.org/nunit-extension-teamcity-event-listener.$version.nupkg",
+        "hash": {
+            "url": "https://chocolatey.org/packages/nunit-extension-teamcity-event-listener",
+            "regex": "$sha256.*?$basename"
+        }
+    }
+}
