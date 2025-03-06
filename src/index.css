@@ -31,12 +31,34 @@
 }
 
 /* Different block colors using Tailwind classes */
-.tetris-block:nth-child(1) { background-color: #f44336; } /* bg-red-500 */
-.tetris-block:nth-child(2) { background-color: #2196f3; } /* bg-blue-500 */
-.tetris-block:nth-child(3) { background-color: #4caf50; } /* bg-green-500 */
-.tetris-block:nth-child(4) { background-color: #ffc107; } /* bg-yellow-500 */
-.tetris-block:nth-child(5) { background-color: #9c27b0; } /* bg-purple-500 */
-.tetris-block:nth-child(6) { background-color: #00bcd4; } /* bg-cyan-500 */
-.tetris-block:nth-child(7) { background-color: #ff9800; } /* bg-orange-500 */
-.tetris-block:nth-child(8) { background-color: #795548; } /* bg-brown-500 */
+.tetris-block:nth-child(1) { background-color: #1e3a8a; } /* dark blue */
+.tetris-block:nth-child(2) { background-color: #312e81; } /* dark indigo */
+.tetris-block:nth-child(3) { background-color: #4c1d95; } /* dark purple */
+.tetris-block:nth-child(4) { background-color: #7e22ce; } /* purple */
+.tetris-block:nth-child(5) { background-color: #c026d3; } /* violet */
+.tetris-block:nth-child(6) { background-color: #eab308; } /* gold */
+.tetris-block:nth-child(7) { background-color: #1d4ed8; } /* blue */
+.tetris-block:nth-child(8) { background-color: #4338ca; } /* indigo */
 /* Add more colors if you have more employee names */
+
+.rating-up {
+ color: green;
+ animation: move-up 0.5s;
+}
+
+.rating-down {
+ color: red;
+ animation: move-down 0.5s;
+}
+
+@keyframes move-up {
+ 0% { transform: translateY(0); }
+ 50% { transform: translateY(-10px); }
+ 100% { transform: translateY(0); }
+}
+
+@keyframes move-down {
+ 0% { transform: translateY(0); }
+ 50% { transform: translateY(10px); }
+ 100% { transform: translateY(0); }
+}

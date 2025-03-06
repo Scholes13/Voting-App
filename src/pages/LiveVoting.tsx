@@ -1,12 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
-import { fetchEmployeeNames } from '../api/employees'; // Import fetchEmployeeNames
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { supabase } from "../lib/supabase";
+import toast from "react-hot-toast";
+import { motion, AnimatePresence } from "framer-motion";
+import { fetchEmployeeNames } from "../api/employees";
+import CountUp from "../components/CountUp";
+
+interface Employee {
+  id: string;
+  name: string;
+}
 
 interface Vote {
   id: string;
   rating: number;
+  employee_id?: string;
   employee: {
     name: string;
   };
@@ -18,120 +25,253 @@ interface Group {
   theme: string;
 }
 
+interface ScheduleWithGroup {
+  group: Group;
+}
+
 function LiveVoting() {
   const [votes, setVotes] = useState<Vote[]>([]);
   const [todayGroup, setTodayGroup] = useState<Group | null>(null);
   const [loading, setLoading] = useState(true);
-  const [employeeNames, setEmployeeNames] = useState<string[]>([]); // State for employee names
-  const [isAnimating, setIsAnimating] = useState(false); // Animation state
+  const [employeeNames, setEmployeeNames] = useState<Employee[]>([]);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [triggerAnimation, setTriggerAnimation] = useState(false);
+  const [previousVoteCount, setPreviousVoteCount] = useState(0);
+  const prevAverageRef = useRef("0.0");
+  const [isRatingIncreasing, setIsRatingIncreasing] = useState(true);
+  const [suspenseMode, setSuspenseMode] = useState(false);
+  const [suspenseTimerId, setSuspenseTimerId] = useState<number | null>(null);
+  const [newVoteName, setNewVoteName] = useState<string | null>(null);
 
+  // Calculate average rating with useMemo
+  const averageRating = useMemo(() => {
+    return votes.length > 0
+      ? (votes.reduce((acc, vote) => acc + vote.rating, 0) / votes.length).toFixed(1)
+      : "0.0";
+  }, [votes]);
+
+  // Detect rating direction change (up or down)
   useEffect(() => {
-    fetchTodayGroup();
-    loadEmployeeNames(); // Load employee names on component mount
+    if (votes.length > 0 && prevAverageRef.current !== "0.0") {
+      setIsRatingIncreasing(parseFloat(averageRating) >= parseFloat(prevAverageRef.current));
+    }
+    
+    // Only update previous average after comparing
+    if (votes.length > 0) {
+      prevAverageRef.current = averageRating;
+    }
+  }, [averageRating, votes.length]);
+
+  // Fetch employee names
+  const loadEmployeeNames = useCallback(async () => {
+    try {
+      const employees = await fetchEmployeeNames();
+      setEmployeeNames(employees);
+    } catch (error) {
+      console.error("Error loading employee names:", error);
+      toast.error("Failed to load employee names");
+    }
   }, []);
 
-  const loadEmployeeNames = async () => {
-    const names = await fetchEmployeeNames();
-    setEmployeeNames(names.map(emp => emp.name)); // Extract names from fetched data
-  };
-
-
-  const fetchTodayGroup = async () => {
-    const setupRealtimeSubscription = (groupId: string) => {
-      const subscription = supabase
-        .channel('votes')
-        .on('postgres_changes', {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'votes'
-        }, async (payload) => { // Make the callback async
-          const newVote = payload.new as Vote;
-
-          if (!payload.new.employee_id) {
-            console.warn("employee_id is undefined in payload.new:", payload.new);
-            toast.success(`Terimakasih telah memberikan nilai!`);
-            fetchVotes(groupId);
-            return;
-          }
-          const employeeId = payload.new.employee_id;
-
-          console.log("employeeId before query:", employeeId); // Log employeeId
-
-          // Fetch employee details to get the name - Using .single() again
-          const { data: employeeData, error: employeeError } = await supabase
-            .from('employees')
-            .select('name')
-            .eq('id', payload.new.employee_id as string) // Use payload.new.employee_id
-            .single(); // Using .single()
-
-          console.log("employeeData after query:", employeeData); // Log employeeData
-          console.log("employeeError after query:", employeeError); // Log employeeError
-
-          if (employeeError) {
-            console.error('Error fetching employee name:', employeeError);
-            toast.success(`Terimakasih telah memberikan nilai!`); // Display generic message if name fetch fails
-            fetchVotes(groupId);
-            return;
-          }
-
-          const employeeName = employeeData?.name || 'Unknown Employee'; // Access name from employeeData.name
-          toast.success(`Terimakasih ${employeeName} telah memberikan nilai!`);
-          fetchVotes(groupId);
-        })
-        .subscribe();
-
-      return () => {
-        subscription.unsubscribe();
-      };
-    };
-
+  // Fetch votes for a specific group
+  const fetchVotes = useCallback(async (groupId: string) => {
+    if (!groupId) {
+      console.warn("Invalid groupId provided to fetchVotes");
+      return;
+    }
+    
     try {
-      const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
-        .from('schedules')
-        .select('group:groups(id, name, theme)')
-        .eq('date', today)
-        .maybeSingle();
+        .from("votes")
+        .select("id, rating, employee_id, employee:employees(name)")
+        .eq("group_id", groupId);
 
       if (error) {
-        console.error('Error fetching today\'s group:', error);
+        console.error("Error fetching votes:", error);
+        toast.error("Failed to fetch votes");
+        return;
+      }
+
+      // Capture previous vote count to determine if we need to animate
+      const prevCount = votes.length;
+
+      // Map the result to the correct Vote[] type
+      const mappedVotes: Vote[] = (data || []).map((item: any) => ({
+        id: item.id,
+        rating: item.rating,
+        employee_id: item.employee_id,
+        employee: {
+          name: item.employee?.name || "Unknown"
+        }
+      }));
+
+      setVotes(mappedVotes);
+      
+      // If vote count has changed, trigger the animation
+      if (prevCount !== mappedVotes.length) {
+        setPreviousVoteCount(prevCount);
+        setTriggerAnimation(prev => !prev); // Toggle to trigger animation
+      }
+    } catch (error) {
+      console.error("Error fetching votes:", error);
+      toast.error("An unexpected error occurred");
+    }
+  }, [votes.length]);
+
+  // Fetch today's group
+  const fetchTodayGroup = useCallback(async () => {
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const { data, error } = await supabase
+        .from("schedules")
+        .select("group:groups(id, name, theme)")
+        .eq("date", today)
+        .maybeSingle<ScheduleWithGroup>();
+
+      if (error) {
+        console.error("Error fetching today\'s group:", error);
+        toast.error("Failed to load today\'s group");
+        setLoading(false);
         return;
       }
 
       if (data?.group) {
-        setTodayGroup(data.group as Group); // Explicitly cast to Group
+        setTodayGroup(data.group);
         if (data.group.id) {
           fetchVotes(data.group.id);
-          setupRealtimeSubscription(data.group.id);
         }
       }
+      
       setLoading(false);
     } catch (error) {
-      console.error('Error:', error);
+      console.error("Error:", error);
+      toast.error("An unexpected error occurred");
       setLoading(false);
     }
-  };
+  }, [fetchVotes]);
 
-  const fetchVotes = async (groupId: string) => {
-    if (!groupId || groupId === '') { // Check if groupId is empty or invalid
-      console.warn("Invalid groupId provided to fetchVotes:", groupId);
-      return; // Return early if groupId is invalid
+  // Start suspense animation (dramatic pause before revealing new rating)
+  const startSuspenseAnimation = useCallback((employeeName: string) => {
+    // Clear any existing timer
+    if (suspenseTimerId !== null) {
+      clearTimeout(suspenseTimerId);
     }
-    try {
-      const { data, error } = await supabase
-        .from('votes')
-        .select('id, rating, employee:employees(name)')
-        .eq('group_id', groupId);
 
-      if (error) {
-        console.error('Error fetching votes:', error);
-        return;
+    setNewVoteName(employeeName);
+    setSuspenseMode(true);
+    
+    // Set timer for suspense duration (3 seconds)
+    const timerId = window.setTimeout(() => {
+      setSuspenseMode(false);
+      setIsAnimating(true);
+      
+      // Slight delay before clearing employee name
+      setTimeout(() => {
+        setNewVoteName(null);
+      }, 2000);
+    }, 3000);
+    
+    setSuspenseTimerId(timerId as unknown as number);
+  }, [suspenseTimerId]);
+
+  // Set up realtime subscription
+  useEffect(() => {
+    if (!todayGroup?.id) return;
+
+    const channel = supabase
+      .channel("votes")
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "votes",
+        filter: `group_id=eq.${todayGroup.id}`
+      }, async (payload) => {
+        try {
+          const newVote = payload.new as any;
+          
+          if (!newVote.employee_id) {
+            console.warn("employee_id is undefined in payload.new:", newVote);
+            toast.success(`Terimakasih telah memberikan nilai!`);
+            
+            // Start suspense animation even without employee name
+            startSuspenseAnimation("Anonymous");
+            
+            // Delay vote fetch to create suspense
+            setTimeout(() => {
+              fetchVotes(todayGroup.id);
+            }, 3000);
+            return;
+          }
+
+          // Fetch employee details to get the name
+          const { data: employeeData, error: employeeError } = await supabase
+            .from("employees")
+            .select("name")
+            .eq("id", newVote.employee_id)
+            .single();
+
+          let employeeName = "Anonymous";
+          
+          if (employeeError) {
+            console.error("Error fetching employee name:", employeeError);
+            toast.success(`Terimakasih telah memberikan nilai!`);
+          } else {
+            employeeName = employeeData?.name || "Anonymous";
+            toast.success(`Terimakasih ${employeeName} telah memberikan nilai!`);
+          }
+          
+          // Start suspense animation
+          startSuspenseAnimation(employeeName);
+          
+          // Delay vote fetch to create suspense
+          setTimeout(() => {
+            fetchVotes(todayGroup.id);
+          }, 3000);
+        } catch (error) {
+          console.error("Error processing new vote:", error);
+        }
+      })
+      .subscribe();
+
+    // Cleanup subscription when component unmounts or group changes
+    return () => {
+      if (suspenseTimerId !== null) {
+        clearTimeout(suspenseTimerId);
       }
+      channel.unsubscribe();
+    };
+  }, [todayGroup, fetchVotes, startSuspenseAnimation, suspenseTimerId]);
 
-      setVotes(data as Vote[] || []); // Explicitly cast to Vote[]
-    } catch (error) {
-      console.error('Error:', error);
+  // Initialize component
+  useEffect(() => {
+    fetchTodayGroup();
+    loadEmployeeNames();
+  }, [fetchTodayGroup, loadEmployeeNames]);
+
+  // Reset animation state after a short delay
+  useEffect(() => {
+    if (isAnimating) {
+      const timer = setTimeout(() => {
+        setIsAnimating(false);
+      }, 2000);
+      return () => clearTimeout(timer);
     }
+  }, [isAnimating]);
+
+  // Calculate animation starting value
+  const getFromValue = () => {
+    // Jika tidak ada vote, mulai dari 0
+    if (votes.length === 0) {
+      return 0;
+    }
+    
+    // Jika nilai turun, mulai dari nilai yang lebih tinggi
+    if (!isRatingIncreasing) {
+      return parseFloat(averageRating) + 0.5;
+    }
+    
+    // Jika nilai naik (default), mulai dari nilai yang lebih rendah
+    return parseFloat(averageRating) - 0.5;
   };
 
   if (loading) {
@@ -152,49 +292,140 @@ function LiveVoting() {
     );
   }
 
-  const averageRating = votes.length > 0
-    ? (votes.reduce((acc, vote) => acc + vote.rating, 0) / votes.length).toFixed(1)
-    : '0.0';
+  // Determine the animation class based on rating direction
+  const getRatingClass = () => {
+    if (votes.length <= 1) return "";
+    return isRatingIncreasing ? "rating-up" : "rating-down";
+  };
+
+  // Generate random heartbeat values for suspense animation
+  const getHeartbeatScale = () => {
+    return suspenseMode ? [1, 1.1, 1, 1.08, 1, 1.06, 1] : [1];
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="tetris-background grid grid-cols-5 gap-2"> {/* Tetris background moved here */}
-        {employeeNames.map((name, index) => (
+      <div className="tetris-background grid grid-cols-5 gap-2">
+        {employeeNames.map((employee, index) => (
           <motion.div
-            key={index}
+            key={employee.id || index}
             className="tetris-block bg-gray-400 p-2 rounded text-center"
-            animate={isAnimating && index === 0 ? { y: 300 } : { y: 0 }} // Animate first block if isAnimating
-            transition={{ duration: 1, type: "spring", stiffness: 50 }} // Example transition
-            onAnimationComplete={() => { if (index === 0) setIsAnimating(false); }} // Reset animation state
+            animate={isAnimating && index === 0 ? { y: 300 } : { y: 0 }}
+            transition={{ duration: 1, type: "spring", stiffness: 50 }}
+            onAnimationComplete={() => { if (index === 0) setIsAnimating(false); }}
           >
-            {name}
+            {employee.name}
           </motion.div>
         ))}
       </div>
 
       <div className="max-w-3xl mx-auto">
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+        <div className="bg-gradient-to-br from-indigo-900 to-purple-800 rounded-xl shadow-md overflow-hidden">
           <div className="p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            <h2 className="text-2xl font-bold text-white mb-6">
               Live Voting Results
             </h2>
+            
             <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-700">
+              <h3 className="text-lg font-semibold text-gray-200">
                 {todayGroup.name}
               </h3>
-              <p className="text-gray-600">Theme: {todayGroup.theme}</p>
+              <p className="text-gray-400">Theme: {todayGroup.theme}</p>
             </div>
-            <motion.div // Use motion.div for animation
-              className="mb-8 text-center"
-              animate={{ scale: 1.2 }} // Example animation: scale up
-              transition={{ duration: 0.5, type: "spring", stiffness: 100 }}
+
+            {/* New vote notification */}
+            <AnimatePresence>
+              {newVoteName && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="mb-4 p-3 rounded-lg bg-yellow-500 bg-opacity-20 text-center"
+                >
+                  <p className="text-yellow-300 font-semibold">
+                    {suspenseMode 
+                      ? `${newVoteName} just voted! Rating update in...` 
+                      : `${newVoteName}'s vote has been recorded!`}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <motion.div
+              className={`mb-8 text-center ${getRatingClass()}`}
+              animate={{
+                scale: suspenseMode 
+                  ? getHeartbeatScale() 
+                  : isAnimating 
+                    ? [1, 1.1, 1] 
+                    : 1,
+                y: !suspenseMode && isAnimating
+                  ? isRatingIncreasing
+                    ? [-10, 0]
+                    : [10, 0]
+                  : 0
+              }}
+              transition={{ 
+                duration: suspenseMode ? 2.5 : 0.5,
+                repeat: suspenseMode ? Infinity : 0,
+                repeatType: "loop"
+              }}
             >
-              <div className="text-4xl font-bold text-blue-600">
-                {averageRating}
-              </div>
-              <div className="text-gray-600">Average Rating</div>
-              <div className="mt-2 text-sm text-gray-500">
-                Total Votes: {votes.length}
+              {suspenseMode ? (
+                // Suspense animation with question marks
+                <div className="relative">
+                  <div className="text-4xl font-bold text-yellow-400 animate-pulse">
+                    ??.?
+                  </div>
+                  <motion.div 
+                    className="absolute top-0 left-0 right-0 h-full flex items-center justify-center"
+                    animate={{ opacity: [0, 0.7, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    <div className="text-4xl font-bold text-yellow-200 opacity-70">
+                      {averageRating}
+                    </div>
+                  </motion.div>
+                </div>
+              ) : (
+                // Normal rating display
+                <div className={`text-4xl font-bold text-yellow-400`}>
+                  {votes.length === 0 ? (
+                    <span className="text-4xl font-bold">0.0</span>
+                  ) : (
+                    <CountUp 
+                      from={getFromValue()}
+                      to={parseFloat(averageRating)}
+                      duration={1.5}
+                      className="text-4xl font-bold"
+                      startWhen={triggerAnimation}
+                      decimals={1}
+                      direction={isRatingIncreasing ? "up" : "down"}
+                    />
+                  )}
+                </div>
+              )}
+              <div className="text-gray-300 mt-2">Average Rating</div>
+              <div className="mt-4 text-sm text-gray-400">
+                Total Votes: 
+                {suspenseMode ? (
+                  <span className="ml-2 font-bold animate-pulse">
+                    {votes.length}{" "}
+                    <span className="text-yellow-300">+1</span>
+                  </span>
+                ) : (
+                  votes.length === 0 ? (
+                    <span className="ml-2 font-bold">0</span>
+                  ) : (
+                    <CountUp 
+                      from={previousVoteCount}
+                      to={votes.length}
+                      duration={1}
+                      className="ml-2 font-bold"
+                      startWhen={triggerAnimation}
+                    />
+                  )
+                )}
               </div>
             </motion.div>
           </div>
