@@ -304,28 +304,37 @@ function LiveVoting() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div
+      className="min-h-screen py-12 px-4 sm:px-6 lg:px-8"
+      style={{
+        backgroundImage: `url('/background.png')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
       <div className="tetris-background grid grid-cols-5 gap-2">
         {employeeNames.map((employee, index) => (
           <motion.div
             key={employee.id || index}
             className="tetris-block bg-gray-400 p-2 rounded text-center"
             animate={isAnimating && index === 0 ? { y: 300 } : { y: 0 }}
-            transition={{ duration: 1, type: "spring", stiffness: 50 }}
-            onAnimationComplete={() => { if (index === 0) setIsAnimating(false); }}
+            transition={{ duration: 1, type: 'spring', stiffness: 50 }}
+            onAnimationComplete={() => {
+              if (index === 0) setIsAnimating(false);
+            }}
           >
             {employee.name}
           </motion.div>
         ))}
       </div>
 
-      <div className="max-w-3xl mx-auto">
-        <div className="bg-gradient-to-br from-indigo-900 to-purple-800 rounded-xl shadow-md overflow-hidden">
+      <div className="max-w-3xl mx-auto mt-48">
+        <div className="bg-transparent rounded-xl shadow-md overflow-hidden backdrop-filter backdrop-blur-lg">
           <div className="p-8">
             <h2 className="text-2xl font-bold text-white mb-6">
               Live Voting Results
             </h2>
-            
+
             <div className="mb-8">
               <h3 className="text-lg font-semibold text-gray-200">
                 {todayGroup.name}
@@ -343,8 +352,8 @@ function LiveVoting() {
                   className="mb-4 p-3 rounded-lg bg-yellow-500 bg-opacity-20 text-center"
                 >
                   <p className="text-yellow-300 font-semibold">
-                    {suspenseMode 
-                      ? `${newVoteName} just voted! Rating update in...` 
+                    {suspenseMode
+                      ? `${newVoteName} just voted! Rating update in...`
                       : `${newVoteName}'s vote has been recorded!`}
                   </p>
                 </motion.div>
@@ -354,37 +363,29 @@ function LiveVoting() {
             <motion.div
               className={`mb-8 text-center ${getRatingClass()}`}
               animate={{
-                scale: suspenseMode 
-                  ? getHeartbeatScale() 
-                  : isAnimating 
-                    ? [1, 1.1, 1] 
-                    : 1,
-                y: !suspenseMode && isAnimating
-                  ? isRatingIncreasing
-                    ? [-10, 0]
-                    : [10, 0]
-                  : 0
+                scale: suspenseMode
+                  ? getHeartbeatScale()
+                  : isAnimating
+                  ? [1, 1.1, 1]
+                  : 1,
+                y: !suspenseMode && isAnimating ? (isRatingIncreasing ? [-10, 0] : [10, 0]) : 0,
               }}
-              transition={{ 
+              transition={{
                 duration: suspenseMode ? 2.5 : 0.5,
                 repeat: suspenseMode ? Infinity : 0,
-                repeatType: "loop"
+                repeatType: 'loop',
               }}
             >
               {suspenseMode ? (
                 // Suspense animation with question marks
                 <div className="relative">
-                  <div className="text-4xl font-bold text-yellow-400 animate-pulse">
-                    ??.?
-                  </div>
-                  <motion.div 
+                  <div className="text-4xl font-bold text-yellow-400 animate-pulse">??.?</div>
+                  <motion.div
                     className="absolute top-0 left-0 right-0 h-full flex items-center justify-center"
                     animate={{ opacity: [0, 0.7, 0] }}
                     transition={{ duration: 1.5, repeat: Infinity }}
                   >
-                    <div className="text-4xl font-bold text-yellow-200 opacity-70">
-                      {averageRating}
-                    </div>
+                    <div className="text-4xl font-bold text-yellow-200 opacity-70">{averageRating}</div>
                   </motion.div>
                 </div>
               ) : (
@@ -393,38 +394,35 @@ function LiveVoting() {
                   {votes.length === 0 ? (
                     <span className="text-4xl font-bold">0.0</span>
                   ) : (
-                    <CountUp 
+                    <CountUp
                       from={getFromValue()}
                       to={parseFloat(averageRating)}
                       duration={1.5}
                       className="text-4xl font-bold"
                       startWhen={triggerAnimation}
                       decimals={1}
-                      direction={isRatingIncreasing ? "up" : "down"}
+                      direction={isRatingIncreasing ? 'up' : 'down'}
                     />
                   )}
                 </div>
               )}
               <div className="text-gray-300 mt-2">Average Rating</div>
               <div className="mt-4 text-sm text-gray-400">
-                Total Votes: 
+                Total Votes:
                 {suspenseMode ? (
                   <span className="ml-2 font-bold animate-pulse">
-                    {votes.length}{" "}
-                    <span className="text-yellow-300">+1</span>
+                    {votes.length} <span className="text-yellow-300">+1</span>
                   </span>
+                ) : votes.length === 0 ? (
+                  <span className="ml-2 font-bold">0</span>
                 ) : (
-                  votes.length === 0 ? (
-                    <span className="ml-2 font-bold">0</span>
-                  ) : (
-                    <CountUp 
-                      from={previousVoteCount}
-                      to={votes.length}
-                      duration={1}
-                      className="ml-2 font-bold"
-                      startWhen={triggerAnimation}
-                    />
-                  )
+                  <CountUp
+                    from={previousVoteCount}
+                    to={votes.length}
+                    duration={1}
+                    className="ml-2 font-bold"
+                    startWhen={triggerAnimation}
+                  />
                 )}
               </div>
             </motion.div>
