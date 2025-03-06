@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { supabase } from "../lib/supabase";
-import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { fetchEmployeeNames } from "../api/employees";
 import CountUp from "../components/CountUp";
@@ -69,7 +68,6 @@ function LiveVoting() {
       setEmployeeNames(employees);
     } catch (error) {
       console.error("Error loading employee names:", error);
-      toast.error("Failed to load employee names");
     }
   }, []);
 
@@ -88,7 +86,6 @@ function LiveVoting() {
 
       if (error) {
         console.error("Error fetching votes:", error);
-        toast.error("Failed to fetch votes");
         return;
       }
 
@@ -114,7 +111,6 @@ function LiveVoting() {
       }
     } catch (error) {
       console.error("Error fetching votes:", error);
-      toast.error("An unexpected error occurred");
     }
   }, [votes.length]);
 
@@ -130,7 +126,6 @@ function LiveVoting() {
 
       if (error) {
         console.error("Error fetching today\'s group:", error);
-        toast.error("Failed to load today\'s group");
         setLoading(false);
         return;
       }
@@ -145,7 +140,6 @@ function LiveVoting() {
       setLoading(false);
     } catch (error) {
       console.error("Error:", error);
-      toast.error("An unexpected error occurred");
       setLoading(false);
     }
   }, [fetchVotes]);
@@ -191,7 +185,6 @@ function LiveVoting() {
           
           if (!newVote.employee_id) {
             console.warn("employee_id is undefined in payload.new:", newVote);
-            toast.success(`Terimakasih telah memberikan nilai!`);
             
             // Start suspense animation even without employee name
             startSuspenseAnimation("Anonymous");
@@ -214,10 +207,8 @@ function LiveVoting() {
           
           if (employeeError) {
             console.error("Error fetching employee name:", employeeError);
-            toast.success(`Terimakasih telah memberikan nilai!`);
           } else {
             employeeName = employeeData?.name || "Anonymous";
-            toast.success(`Terimakasih ${employeeName} telah memberikan nilai!`);
           }
           
           // Start suspense animation
